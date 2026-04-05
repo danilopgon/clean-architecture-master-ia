@@ -34,7 +34,11 @@ function makeMoney(amount: number, currency = 'EUR'): Money {
   return must(Money.create(amount, must(Currency.create(currency))));
 }
 
-function makeItem(skuValue = 'BOOK-001', amount = 1200, quantity = 1): OrderItem {
+function makeItem(
+  skuValue = 'BOOK-001',
+  amount = 1200,
+  quantity = 1,
+): OrderItem {
   return must(
     OrderItem.create({
       sku: must(SKU.create(skuValue)),
@@ -77,13 +81,19 @@ class SpyEventBus implements EventBus {
   publishResult: Result<void, AppError> = ok(undefined);
   published: DomainEvent[][] = [];
 
-  async publish(events: ReadonlyArray<DomainEvent>): Promise<Result<void, AppError>> {
+  async publish(
+    events: ReadonlyArray<DomainEvent>,
+  ): Promise<Result<void, AppError>> {
     this.published.push([...events]);
     return this.publishResult;
   }
 }
 
-function dto(orderId: string, productId: string, quantity: number): AddItemToOrderDTO {
+function dto(
+  orderId: string,
+  productId: string,
+  quantity: number,
+): AddItemToOrderDTO {
   const result = AddItemToOrderDTO.create({ orderId, productId, quantity });
   if (!result.ok) throw new Error('unexpected dto failure');
   return result.value;
