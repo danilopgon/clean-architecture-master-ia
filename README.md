@@ -12,3 +12,24 @@
 - `POST /orders` crea un pedido.
 - `POST /orders/:orderId/items` agrega una línea (SKU + quantity) con precio actual.
 - Devuelve el total del pedido
+
+## Estructura de Carpetas
+
+    /src
+        /domain
+            /entities
+            /value-objects
+            /events
+            /errors
+        /application
+            /use-cases
+            /ports
+            /dtos
+            /errors.ts
+        /infrastructure
+            /persistence/in-memory
+            /http/controllers
+            /messaging
+        /composition
+        /shared
+    /tests
