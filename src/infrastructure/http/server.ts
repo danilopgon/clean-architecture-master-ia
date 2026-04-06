@@ -4,11 +4,17 @@ import { OrdersController } from './controllers/OrdersControllers.js';
 
 export const buildServer = (deps: ServerDependencies): FastifyInstance => {
   const app = fastify({ logger: true });
+  const logger = deps.logger.child({ context: 'http-server' });
+
   const ordersController = new OrdersController(deps);
   ordersController.registerRoutes(app);
 
-  app.get('/health', async (request) => {
-    request.log.info('Health check requested');
+  app.addHook('onReady', async () => {
+    logger.info('HTTP server initialized');
+  });
+
+  app.get('/health', async () => {
+    logger.info('Health check requested');
     return { status: 'ok' };
   });
 

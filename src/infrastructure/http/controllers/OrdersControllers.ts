@@ -50,16 +50,25 @@ export class OrdersController {
   constructor(private readonly deps: OrdersControllerDeps) {}
 
   registerRoutes(app: FastifyInstance): void {
+    const logger = this.deps.logger.child({ context: 'orders-controller' });
+
     app.post<CreateOrderRequest>('/orders', async (request, reply) => {
       const dtoResult = CreateOrderDTO.create(request.body);
       if (!dtoResult.ok) {
+        logger.warn('Create order validation failed', { error: dtoResult.error.message });
         return sendAppError(reply, dtoResult.error);
       }
 
       const result = await this.deps.createOrder.execute(dtoResult.value);
       if (!result.ok) {
+        logger.error('Create order failed', {
+          errorType: result.error.type,
+          errorMessage: result.error.message,
+        });
         return sendAppError(reply, result.error);
       }
+
+      logger.info('Order created', { orderId: result.value.orderId });
 
       return reply.code(201).send(result.value);
     });
@@ -75,6 +84,10 @@ export class OrdersController {
         });
 
         if (!dtoResult.ok) {
+          logger.warn('Add item validation failed', {
+            orderId: request.params.orderId,
+            error: dtoResult.error.message,
+          });
           return sendAppError(reply, dtoResult.error);
         }
 
@@ -82,11 +95,20 @@ export class OrdersController {
           dtoResult.value,
         );
         if (!addItemResult.ok) {
+          logger.error('Add item failed', {
+            orderId: dtoResult.value.orderId,
+            errorType: addItemResult.error.type,
+            errorMessage: addItemResult.error.message,
+          });
           return sendAppError(reply, addItemResult.error);
         }
 
         const orderIdResult = OrderId.create(dtoResult.value.orderId);
         if (!orderIdResult.ok) {
+          logger.warn('Order id became invalid after update', {
+            orderId: dtoResult.value.orderId,
+            error: orderIdResult.error.message,
+          });
           return sendAppError(
             reply,
             validationError(orderIdResult.error.message),
@@ -97,9 +119,17 @@ export class OrdersController {
           orderIdResult.value,
         );
         if (!orderResult.ok) {
+          logger.error('Failed to fetch order after add item', {
+            orderId: dtoResult.value.orderId,
+            errorType: orderResult.error.type,
+            errorMessage: orderResult.error.message,
+          });
           return sendAppError(reply, orderResult.error);
         }
         if (orderResult.value === null) {
+          logger.error('Order missing after successful item update', {
+            orderId: dtoResult.value.orderId,
+          });
           return sendAppError(
             reply,
             validationError('Order was updated but could not be read back'),
@@ -112,6 +142,12 @@ export class OrdersController {
             amountInCents: money.amount,
           }),
         );
+
+        logger.info('Item added to order', {
+          orderId: orderResult.value.id.value,
+          status: orderResult.value.status,
+          totalCurrencies: totals.length,
+        });
 
         return reply.code(200).send({
           orderId: orderResult.value.id.value,
